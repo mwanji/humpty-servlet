@@ -1,0 +1,7 @@
+[[bundles]]
+  name = "tags.js"
+	assets = ["jquery", "blocks"]
+
+[[bundles]]
+  name = "tags.css"
+	assets = ["app1", "app2"]

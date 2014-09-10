@@ -1,0 +1,53 @@
+package co.mewf.humpty.servlet;
+
+import java.io.IOException;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.io.FilenameUtils;
+
+import co.mewf.humpty.Pipeline;
+
+/**
+ * Builds a {@link Pipeline} configured via the default TOML file.
+ */
+public class HumptyFilter implements Filter {
+
+  private final Pipeline pipeline;
+  private String urlPattern;
+  
+  public HumptyFilter(Pipeline pipeline, String urlPattern) {
+    this.pipeline = pipeline;
+    this.urlPattern = urlPattern.substring(0, urlPattern.length() - 2);
+  }
+
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {}
+
+  @Override
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    HttpServletRequest httpRequest = (HttpServletRequest) request;
+    HttpServletResponse httpResponse = ((HttpServletResponse) response);
+    String assetUri = httpRequest.getServletPath().substring(urlPattern.length() + 1);
+    
+    int fingerprintIndex = assetUri.indexOf("-humpty");
+    if (fingerprintIndex > -1) {
+      assetUri = assetUri.substring(0, fingerprintIndex) + "." + FilenameUtils.getExtension(assetUri);
+    }
+
+    String processedAsset = pipeline.process(assetUri);
+    
+    httpResponse.setContentType(httpRequest.getServletPath().endsWith(".js") ? "text/javascript" : "text/css");
+    httpResponse.getWriter().write(processedAsset);
+  }
+
+  @Override
+  public void destroy() {}
+}
