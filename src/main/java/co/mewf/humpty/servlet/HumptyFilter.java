@@ -1,6 +1,7 @@
 package co.mewf.humpty.servlet;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -22,9 +23,12 @@ public class HumptyFilter implements Filter {
 
   private final Pipeline pipeline;
   private String urlPattern;
+  private ServletCache cache;
   
   public HumptyFilter(Pipeline pipeline, String urlPattern) {
     this.pipeline = pipeline;
+    Optional<FileWatchingServletCache> optionalCache = pipeline.getPipelineListener(FileWatchingServletCache.class);
+    this.cache = optionalCache.isPresent() ? optionalCache.get() : new NoopServletCache(pipeline);
     this.urlPattern = urlPattern.substring(0, urlPattern.length() - 2);
   }
 
@@ -35,16 +39,24 @@ public class HumptyFilter implements Filter {
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
     HttpServletRequest httpRequest = (HttpServletRequest) request;
     HttpServletResponse httpResponse = ((HttpServletResponse) response);
-    String assetUri = httpRequest.getServletPath().substring(urlPattern.length() + 1);
+    String servletPath = httpRequest.getServletPath();
+    String requestUri = httpRequest.getRequestURI();
+    
+    String assetUri = requestUri.substring(urlPattern.length() + 1);
     
     int fingerprintIndex = assetUri.indexOf("-humpty");
     if (fingerprintIndex > -1) {
       assetUri = assetUri.substring(0, fingerprintIndex) + "." + FilenameUtils.getExtension(assetUri);
     }
-
-    String processedAsset = pipeline.process(assetUri);
     
-    httpResponse.setContentType(httpRequest.getServletPath().endsWith(".js") ? "text/javascript" : "text/css");
+    String processedAsset = cache.get(assetUri);
+
+    if (assetUri.endsWith(".js")) {
+      httpResponse.setContentType("text/javascript");
+    } else if (assetUri.endsWith(".css")) {
+      httpResponse.setContentType("text/css");
+    }
+    
     httpResponse.getWriter().write(processedAsset);
   }
 

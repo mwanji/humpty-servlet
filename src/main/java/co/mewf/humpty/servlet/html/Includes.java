@@ -2,10 +2,9 @@ package co.mewf.humpty.servlet.html;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.servlet.ServletContext;
@@ -17,13 +16,10 @@ import co.mewf.humpty.config.Bundle;
 import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.servlet.HumptyServletContextInitializer;
 import co.mewf.humpty.spi.listeners.PipelineListener;
-import co.mewf.humpty.spi.resolvers.Resolver;
-import co.mewf.humpty.spi.resolvers.WebJarResolver;
 
 public class Includes implements PipelineListener {
 
   private Configuration configuration;
-  private List<? extends Resolver> resolvers;
   private Configuration.Mode mode;
   private final Map<String, String> bundleFingerprints = new HashMap<>();
   private String contextPath;
@@ -51,29 +47,14 @@ public class Includes implements PipelineListener {
   }
   
   public String generate(String bundleName) {
-    StringBuilder html = new StringBuilder();
-
-    Bundle bundle = null;
-    for (Bundle candidate : configuration.getBundles()) {
-      if (candidate.accepts(bundleName)) {
-        bundle = candidate;
-        break;
-      }
-    }
-    
+    Bundle bundle = configuration.getBundles().stream().filter(b -> b.accepts(bundleName)).findFirst().orElseThrow(() -> new IllegalArgumentException("No bundle defined with name: " + bundleName));
     String urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
 
     if (Configuration.Mode.PRODUCTION == mode) {
-      toHtml(urlRoot, bundleFingerprints.get(bundleName), html);
-
-      return html.toString();
+      return toHtml(urlRoot, bundleFingerprints.get(bundleName));
     }
 
-    for (String asset : bundle.getBundleFor(bundleName)) {
-      toHtml(urlRoot, bundle.getName() + "/" + asset, html);
-    }
-
-    return html.toString();
+    return bundle.stream().map(asset -> toHtml(urlRoot, bundle.getName() + "/" + asset)).collect(Collectors.joining("\n"));
   }
   
   @Inject
@@ -82,11 +63,11 @@ public class Includes implements PipelineListener {
     Configuration.Options options = configuration.getOptionsFor(this);
     this.urlPattern = options.get("urlPattern", HumptyServletContextInitializer.DEFAULT_URL_PATTERN);
     this.mode = mode;
-    this.resolvers = Collections.singletonList(new WebJarResolver());
     this.contextPath = servletContext.getContextPath();
   }
 
-  private void toHtml(String contextPath, String expandedAsset, StringBuilder html) {
+  private String toHtml(String contextPath, String expandedAsset) {
+    StringBuilder html = new StringBuilder();
     String assetBaseName = expandedAsset;
     if (assetBaseName.endsWith(".js")) {
       html.append("<script src=\"");
@@ -105,6 +86,7 @@ public class Includes implements PipelineListener {
     } else if (assetBaseName.endsWith(".css")) {
       html.append("\" />");
     }
-    html.append("\n");
+    
+    return html.toString();
   }
 }

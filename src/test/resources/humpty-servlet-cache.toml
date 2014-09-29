@@ -1,0 +1,23 @@
+[[bundles]]
+  name = "tags.js"
+	assets = ["jquery", "blocks"]
+
+[[bundles]]
+  name = "tags.css"
+	assets = ["app1", "app2"]
+
+[[bundles]]
+  name = "modifiable.css"
+  assets = ["app1", "modifiable"]
+
+[options.servletCache]
+  watchDir = "src/test/resources"
+
+[options.webjar]
+  rootDir = "src/test/resources"
+  
+[options.pipeline]
+  mode = "DEVELOPMENT"
+  
+[options.pipeline.elements]
+  listeners = ["servletCache"]

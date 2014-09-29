@@ -8,3 +8,6 @@
   
 [options.servlet]
   urlPattern = ""
+
+[options.pipeline.elements]
+  listeners = ["servlet"]

@@ -2,7 +2,6 @@ package co.mewf.humpty.servlet;
 
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
@@ -26,9 +25,6 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
 
   @Override
   public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
-    
-    Logger.getGlobal().info(getClass().getName() + "#onStartup()");
-    
     Configuration configuration = Configuration.load("/humpty.toml");
     HumptyBootstrap humptyBootstrap = new HumptyBootstrap(configuration, ctx);
     Options options = configuration.getOptionsFor(this);

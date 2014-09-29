@@ -3,13 +3,17 @@ package co.mewf.humpty.servlet;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.util.Collections.emptyList;
 
 import java.io.IOException;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -18,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 import javax.inject.Inject;
 
@@ -26,15 +31,17 @@ import co.mewf.humpty.config.Bundle;
 import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.spi.listeners.PipelineListener;
 
-public class FileSystemWatcher implements PipelineListener {
+public class FileWatchingServletCache implements PipelineListener, ServletCache {
 
   private final ScheduledExecutorService watchServiceExecutor = Executors.newSingleThreadScheduledExecutor();
   private final ExecutorService pipelineExecutor = Executors.newSingleThreadExecutor();
-  private final ConcurrentMap<Path, String> pathBundles = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Path, List<String>> pathBundles = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, String> cache = new ConcurrentHashMap<>();
   private final BlockingQueue<String> bundlesToProcess = new LinkedBlockingQueue<String>();
   private WatchService watchService;
   private Path watchDir;
+  private Pipeline pipeline;
+  private boolean active;
   
   @Override
   public String getName() {
@@ -43,16 +50,23 @@ public class FileSystemWatcher implements PipelineListener {
 
   @Inject
   public void configure(Configuration.Options options, Pipeline pipeline) {
+    this.pipeline = pipeline;
+    this.active = options.get("active", Boolean.TRUE);
+    
+    if (!active) {
+      return;
+    }
+    
     this.watchDir = Paths.get(options.get("watchDir", "src/main/resources"));
+    System.out.println(watchDir.toAbsolutePath());
     try {
       this.watchService = watchDir.getFileSystem().newWatchService();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
 
-    System.out.println(watchDir.toAbsolutePath());
     try {
-      watchDir.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
+      watchDir.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -66,20 +80,11 @@ public class FileSystemWatcher implements PipelineListener {
           .findFirst()
           .ifPresent(event -> {
             Path key = currentDir.resolve((Path) event.context());
-            if (pathBundles.containsKey(key)) {
-              String bundle = pathBundles.get(key);
-              if (!bundlesToProcess.contains(bundle)) {
-                bundlesToProcess.add(bundle);
-              }
-            }
+            pathBundles.getOrDefault(key, emptyList()).stream().filter(not(bundlesToProcess::contains)).forEach(bundlesToProcess::add);
           });
-//         System.out.println(currentDir.resolve((Path) event.context()) + " " + event.kind())
         watchKey.reset();
-//        WatchEvent<?> watchEvent = watchKey.pollEvents().get(0);
-//        Path fileName = (Path) watchEvent.context();
-//        System.out.println(fileName + " " + watchEvent.kind());
-      } catch (InterruptedException e) {
-        e.printStackTrace();
+      } catch (ClosedWatchServiceException | InterruptedException e) {
+        // ignore
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -91,9 +96,11 @@ public class FileSystemWatcher implements PipelineListener {
         String bundleName = bundlesToProcess.take();
         String result = pipeline.process(bundleName);
         cache.put(bundleName, result);
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
+       } catch (InterruptedException e) {
+         break;
+       } catch (Exception e) {
+         e.printStackTrace();
+       }
      }
    }); 
   }
@@ -103,25 +110,51 @@ public class FileSystemWatcher implements PipelineListener {
   
   @Override
   public void onAssetProcessed(String asset, String name, String assetPath, Bundle bundle) {
+    if (watchDir == null) {
+      return;
+    }
+    
     Path path = watchDir.resolve(assetPath);
-    System.out.println("FileSystemWatcher.onAssetProcessed() path=" + path + " absolute=" + path.toAbsolutePath());
+    
+    if (!path.toFile().exists()) {
+      return;
+    }
+    
     pathBundles.computeIfAbsent(path, p -> {
-        try {
-          path.getParent().register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
-          return bundle.getName();
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+      try {
+        path.getParent().register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
+        ArrayList<String> bundles = new ArrayList<String>();
+        bundles.add(bundle.getName());
+        
+        return bundles;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     });
+  }
+  
+  @Override
+  public String get(String bundleName) {
+    return cache.computeIfAbsent(bundleName, pipeline::process);
   }
   
   public void shutdown() {
     watchServiceExecutor.shutdownNow();
     pipelineExecutor.shutdownNow();
-    try {
-      watchService.close();
-    } catch (IOException e) {
-      e.printStackTrace();
+    if (watchService != null) {
+      try {
+        watchService.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
+  }
+  
+  boolean contains(String bundleName) {
+    return cache.containsKey(bundleName);
+  }
+  
+  private Predicate<String> not(Predicate<String> p) {
+    return p.negate();
   }
 }
