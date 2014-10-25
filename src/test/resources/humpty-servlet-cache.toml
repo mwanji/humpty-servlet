@@ -20,4 +20,4 @@
   mode = "DEVELOPMENT"
   
 [options.pipeline.elements]
-  listeners = ["servletCache"]
+  listeners = []
