@@ -13,7 +13,7 @@
 [options.servletCache]
   watchDir = "src/test/resources"
 
-[options.webjar]
+[options.webjars]
   rootDir = "src/test/resources"
   
 [options.pipeline]
