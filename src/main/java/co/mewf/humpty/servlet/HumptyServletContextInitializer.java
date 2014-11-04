@@ -9,6 +9,7 @@ import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import co.mewf.humpty.Pipeline;
 import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.config.Configuration.Options;
 import co.mewf.humpty.config.HumptyBootstrap;
@@ -29,8 +30,14 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
     HumptyBootstrap humptyBootstrap = new HumptyBootstrap(configuration, ctx);
     Options options = configuration.getOptionsFor(this);
     String urlPattern = options.get("urlPattern", DEFAULT_URL_PATTERN + "/*");
+    Pipeline pipeline = humptyBootstrap.createPipeline();
+    String mode = configuration.getOptionsFor(humptyBootstrap).get("mode", Configuration.Mode.PRODUCTION.toString());
+
+    if (mode.equals(Configuration.Mode.PRODUCTION.toString())) {
+      configuration.getBundles().forEach(b -> pipeline.process(b.getName()));
+    }
     
-    FilterRegistration filterRegistration = ctx.addFilter("humptyFilter", new HumptyFilter(humptyBootstrap.createPipeline(), urlPattern));
+    FilterRegistration filterRegistration = ctx.addFilter("humptyFilter", new HumptyFilter(pipeline, urlPattern));
     filterRegistration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), false, urlPattern);
   }
 
