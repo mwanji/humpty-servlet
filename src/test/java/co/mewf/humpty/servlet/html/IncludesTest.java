@@ -69,7 +69,7 @@ public class IncludesTest {
     String jsHtml = includes.generate("tags.js");
     String cssHtml = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/context/humpty/tags-humpty" + hash("jquery.js", "blocks.js") + ".js\"></script>", jsHtml);
+    assertEquals("<script src=\"/context/humpty/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsHtml);
     assertEquals("<link rel=\"stylesheet\" href=\"/context/humpty/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssHtml);
   }
 
@@ -84,7 +84,7 @@ public class IncludesTest {
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/humpty/tags-humpty" + hash("jquery.js", "blocks.js") + ".js\"></script>", jsInclude);
+    assertEquals("<script src=\"/humpty/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
     assertEquals("<link rel=\"stylesheet\" href=\"/humpty/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
   }
   
@@ -100,13 +100,13 @@ public class IncludesTest {
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/ctx/custom/tags-humpty" + hash("jquery.js", "blocks.js") + ".js\"></script>", jsInclude);
+    assertEquals("<script src=\"/ctx/custom/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
     assertEquals("<link rel=\"stylesheet\" href=\"/ctx/custom/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
   }
   
   @Test
-  public void should_bypass_humpty_filter_in_production_mode() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/should_bypass_humpty_filter_in_production_mode.toml", servletContext("/ctx")).createPipeline();
+  public void should_handle_empty_url_pattern() throws Exception {
+    Pipeline pipeline = new HumptyBootstrap("/should_handle_empty_url_pattern.toml", servletContext("/ctx")).createPipeline();
     
     Includes includes = pipeline.getPipelineListener(Includes.class).get();
     
@@ -116,7 +116,7 @@ public class IncludesTest {
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/ctx/tags-humpty" + hash("jquery.js", "blocks.js") + ".js\"></script>", jsInclude);
+    assertEquals("<script src=\"/ctx/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
     assertEquals("<link rel=\"stylesheet\" href=\"/ctx/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
   }
   
