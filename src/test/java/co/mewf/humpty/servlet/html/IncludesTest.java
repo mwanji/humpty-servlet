@@ -119,7 +119,22 @@ public class IncludesTest {
     assertEquals("<script src=\"/ctx/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
     assertEquals("<link rel=\"stylesheet\" href=\"/ctx/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
   }
-  
+
+  @Test
+  public void should_use_prebuilt_bundle_names_in_external_mode() throws Exception {
+    Pipeline pipeline = new HumptyBootstrap("/should_use_prebuilt_bundle_names_in_external_mode.toml", servletContext("/")).createPipeline();
+    
+    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    
+//    pipeline.process("tags.css");
+//    pipeline.process("tags.js");
+    
+    String cssInclude = includes.generate("tags.css");
+    String jsInclude = includes.generate("tags.js");
+
+    assertEquals("<link rel=\"stylesheet\" href=\"/assets/tags-humpty123.css\" />", cssInclude);
+    assertEquals("<script src=\"/assets/tags-humpty456.js\"></script>", jsInclude);
+  }
   private ServletContext servletContext(String contextPath) {
     ServletContext servletContext = mock(ServletContext.class);
     when(servletContext.getContextPath()).thenReturn(contextPath);

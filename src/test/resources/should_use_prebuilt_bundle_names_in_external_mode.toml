@@ -1,0 +1,16 @@
+[[bundles]]
+  name = "tags.js"
+	assets = ["jquery", "blocks"]
+
+[[bundles]]
+  name = "tags.css"
+	assets = ["app1", "app2"]
+
+[options.pipeline]
+  mode = "EXTERNAL"
+  
+[options.servlet]
+  urlPattern = "/assets"
+  
+[options.pipeline.elements]
+  listeners = ["servlet"]

@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FilenameUtils;
 
 import co.mewf.humpty.Pipeline;
+import co.mewf.humpty.config.Configuration;
+import co.mewf.humpty.config.Configuration.Mode;
 import co.mewf.humpty.servlet.html.Includes;
 
 /**
@@ -22,11 +24,13 @@ import co.mewf.humpty.servlet.html.Includes;
 public class HumptyFilter implements Filter {
 
   private final Pipeline pipeline;
-  private String urlPattern;
+  private final String urlPattern;
+  private final Mode mode;
   
-  public HumptyFilter(Pipeline pipeline, String urlPattern) {
+  public HumptyFilter(Pipeline pipeline, String urlPattern, Configuration.Mode mode) {
     this.pipeline = pipeline;
-    this.urlPattern = urlPattern.substring(0, urlPattern.length() - 2);
+    this.mode = mode;
+    this.urlPattern = urlPattern;
   }
 
   @Override
@@ -53,6 +57,10 @@ public class HumptyFilter implements Filter {
       httpResponse.setContentType("text/javascript");
     } else if (assetUri.endsWith(".css")) {
       httpResponse.setContentType("text/css");
+    }
+    
+    if (mode == Configuration.Mode.PRODUCTION) {
+      
     }
     
     httpResponse.getWriter().write(processedAsset);

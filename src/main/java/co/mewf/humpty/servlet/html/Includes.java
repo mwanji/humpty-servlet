@@ -17,6 +17,8 @@ import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.servlet.HumptyServletContextInitializer;
 import co.mewf.humpty.spi.listeners.PipelineListener;
 
+import com.moandjiezana.toml.Toml;
+
 public class Includes implements PipelineListener {
 
   private Configuration configuration;
@@ -50,7 +52,7 @@ public class Includes implements PipelineListener {
     Bundle bundle = configuration.getBundles().stream().filter(b -> b.accepts(bundleName)).findFirst().orElseThrow(() -> new IllegalArgumentException("No bundle defined with name: " + bundleName));
     String urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
 
-    if (Configuration.Mode.PRODUCTION == mode) {
+    if (Configuration.Mode.DEVELOPMENT != mode) {
       return toHtml(urlRoot, bundleFingerprints.get(bundleName));
     }
 
@@ -64,6 +66,9 @@ public class Includes implements PipelineListener {
     this.urlPattern = options.get("urlPattern", HumptyServletContextInitializer.DEFAULT_URL_PATTERN);
     this.mode = mode;
     this.contextPath = servletContext.getContextPath();
+    if (mode == Configuration.Mode.EXTERNAL) {
+      this.bundleFingerprints.putAll(new Toml().parse(getClass().getResourceAsStream("/humpty-external.toml")).to(Map.class));
+    }
   }
 
   private String toHtml(String contextPath, String expandedAsset) {

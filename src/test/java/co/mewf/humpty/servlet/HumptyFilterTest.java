@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.webjars.WebJarAssetLocator;
 
 import co.mewf.humpty.Pipeline;
+import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.config.HumptyBootstrap;
 
 public class HumptyFilterTest {
@@ -26,7 +27,7 @@ public class HumptyFilterTest {
   public void should_handle_digest_bundle_name() throws Exception {
     HttpServletResponse response = mock(HttpServletResponse.class);
     
-    HumptyFilter filter = new HumptyFilter(pipeline, "/humpty/*");
+    HumptyFilter filter = new HumptyFilter(pipeline, "/humpty", Configuration.Mode.DEVELOPMENT);
 
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRequestURI()).thenReturn("/humpty/tags-humptya2e5f9bda12.css");
