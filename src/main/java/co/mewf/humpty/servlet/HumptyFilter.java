@@ -16,7 +16,6 @@ import org.apache.commons.io.FilenameUtils;
 import co.mewf.humpty.Pipeline;
 import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.config.Configuration.Mode;
-import co.mewf.humpty.servlet.html.Includes;
 
 /**
  * Builds a {@link Pipeline} configured via the default TOML file.
@@ -31,11 +30,6 @@ public class HumptyFilter implements Filter {
     this.pipeline = pipeline;
     this.mode = mode;
     this.urlPattern = urlPattern;
-  }
-
-  @Override
-  public void init(FilterConfig filterConfig) throws ServletException {
-    pipeline.getPipelineListener(Includes.class).ifPresent(i -> filterConfig.getServletContext().setAttribute(Includes.class.getName(), i));
   }
 
   @Override
@@ -65,6 +59,9 @@ public class HumptyFilter implements Filter {
     
     httpResponse.getWriter().write(processedAsset);
   }
+  
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {}
 
   @Override
   public void destroy() {}

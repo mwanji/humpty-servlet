@@ -1,6 +1,7 @@
 package co.mewf.humpty.servlet;
 
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.servlet.DispatcherType;
@@ -13,6 +14,7 @@ import co.mewf.humpty.Pipeline;
 import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.config.Configuration.Options;
 import co.mewf.humpty.config.HumptyBootstrap;
+import co.mewf.humpty.digest.DigestPipelineListener;
 import co.mewf.humpty.servlet.html.Includes;
 import co.mewf.humpty.spi.PipelineElement;
 
@@ -32,9 +34,12 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
     Options options = configuration.getOptionsFor(this);
     String urlPattern = options.get("urlPattern", DEFAULT_URL_PATTERN);
     Pipeline pipeline = humptyBootstrap.createPipeline();
-    pipeline.getPipelineListener(Includes.class).ifPresent(i -> ctx.setAttribute(Includes.class.getName(), i));
 
     Configuration.Mode mode = Configuration.Mode.valueOf(configuration.getOptionsFor(humptyBootstrap).get("mode", Configuration.Mode.PRODUCTION.toString()));
+    
+    Optional<DigestPipelineListener> optionalDigest = pipeline.getPipelineListener(DigestPipelineListener.class);
+    Includes includes = mode == Configuration.Mode.DEVELOPMENT || !optionalDigest.isPresent() ? new Includes(configuration.getBundles(), ctx.getContextPath(), urlPattern) : new Includes(optionalDigest.get(), ctx.getContextPath(), urlPattern);
+    ctx.setAttribute(Includes.class.getName(), includes);
     
     if (mode == Configuration.Mode.PRODUCTION) {
       configuration.getBundles().forEach(b -> pipeline.process(b.getName()));

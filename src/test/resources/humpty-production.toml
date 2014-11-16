@@ -5,6 +5,3 @@
 [[bundles]]
   name = "tags.css"
 	assets = ["app1", "app2"]
-
-[options.pipeline.elements]
-  listeners = ["servlet"]

@@ -8,6 +8,3 @@
 
 [options.pipeline]
   mode = "DEVELOPMENT"
-  
-[options.pipeline.elements]
-  listeners = ["servlet"]

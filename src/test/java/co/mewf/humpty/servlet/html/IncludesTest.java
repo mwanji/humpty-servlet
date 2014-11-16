@@ -15,7 +15,9 @@ import org.junit.Test;
 import org.webjars.WebJarAssetLocator;
 
 import co.mewf.humpty.Pipeline;
+import co.mewf.humpty.config.Configuration;
 import co.mewf.humpty.config.HumptyBootstrap;
+import co.mewf.humpty.digest.DigestPipelineListener;
 
 public class IncludesTest {
 
@@ -23,8 +25,7 @@ public class IncludesTest {
 
   @Test
   public void should_unbundle_assets_in_dev_mode() {
-    Pipeline pipeline = new HumptyBootstrap("/humpty-development.toml", servletContext("/context")).createPipeline();
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    Includes includes = new Includes(Configuration.load("/humpty-development.toml").getBundles(), "/context", "/humpty");
     
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
@@ -35,8 +36,7 @@ public class IncludesTest {
 
   @Test
   public void should_handle_root_context_path_in_dev_mode() {
-    Pipeline pipeline = new HumptyBootstrap("/humpty-development.toml", servletContext("/")).createPipeline();
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    Includes includes = new Includes(Configuration.load("/humpty-development.toml").getBundles(), "/", "/humpty");
     
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
@@ -47,9 +47,9 @@ public class IncludesTest {
   
   @Test
   public void should_use_custom_url_pattern() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/should_use_custom_url_pattern.toml", servletContext("/ctx")).createPipeline();
+//    Pipeline pipeline = new HumptyBootstrap("/should_use_custom_url_pattern.toml", servletContext("/ctx")).createPipeline();
     
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    Includes includes = new Includes(Configuration.load("/humpty-development.toml").getBundles(), "/ctx", "/custom");
     
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
@@ -61,7 +61,8 @@ public class IncludesTest {
   @Test
   public void should_bundle_assets_in_production_mode() throws Exception {
     Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/context")).createPipeline();
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
+    Includes includes = new Includes(digest, "/context", "/humpty");
     
     pipeline.process("tags.js");
     pipeline.process("tags.css");
@@ -76,7 +77,8 @@ public class IncludesTest {
   @Test
   public void should_handle_root_context_path_in_production_mode() throws Exception {
     Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/")).createPipeline();
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
+    Includes includes = new Includes(digest, "/", "/humpty");
     
     pipeline.process("tags.js");
     pipeline.process("tags.css");
@@ -90,9 +92,9 @@ public class IncludesTest {
   
   @Test
   public void should_use_custom_url_pattern_in_production_mode() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/should_use_custom_url_pattern_in_production_mode.toml", servletContext("/ctx")).createPipeline();
-    
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/ctx")).createPipeline();
+    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
+    Includes includes = new Includes(digest, "/ctx", "/custom");
     
     pipeline.process("tags.js");
     pipeline.process("tags.css");
@@ -106,9 +108,9 @@ public class IncludesTest {
   
   @Test
   public void should_handle_empty_url_pattern() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/should_handle_empty_url_pattern.toml", servletContext("/ctx")).createPipeline();
-    
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
+    Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/ctx")).createPipeline();
+    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
+    Includes includes = new Includes(digest, "/ctx", "");
     
     pipeline.process("tags.js");
     pipeline.process("tags.css");
@@ -120,21 +122,6 @@ public class IncludesTest {
     assertEquals("<link rel=\"stylesheet\" href=\"/ctx/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
   }
 
-  @Test
-  public void should_use_prebuilt_bundle_names_in_external_mode() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/should_use_prebuilt_bundle_names_in_external_mode.toml", servletContext("/")).createPipeline();
-    
-    Includes includes = pipeline.getPipelineListener(Includes.class).get();
-    
-//    pipeline.process("tags.css");
-//    pipeline.process("tags.js");
-    
-    String cssInclude = includes.generate("tags.css");
-    String jsInclude = includes.generate("tags.js");
-
-    assertEquals("<link rel=\"stylesheet\" href=\"/assets/tags-humpty123.css\" />", cssInclude);
-    assertEquals("<script src=\"/assets/tags-humpty456.js\"></script>", jsInclude);
-  }
   private ServletContext servletContext(String contextPath) {
     ServletContext servletContext = mock(ServletContext.class);
     when(servletContext.getContextPath()).thenReturn(contextPath);

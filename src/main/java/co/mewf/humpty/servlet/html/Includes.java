@@ -1,76 +1,41 @@
 package co.mewf.humpty.servlet.html;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.stream.Collectors;
-
-import javax.inject.Inject;
-import javax.servlet.ServletContext;
-import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.io.FilenameUtils;
 
 import co.mewf.humpty.config.Bundle;
-import co.mewf.humpty.config.Configuration;
-import co.mewf.humpty.servlet.HumptyServletContextInitializer;
-import co.mewf.humpty.spi.listeners.PipelineListener;
+import co.mewf.humpty.digest.DigestPipelineListener;
 
-import com.moandjiezana.toml.Toml;
+public class Includes {
 
-public class Includes implements PipelineListener {
+  private final List<Bundle> bundles;
+  private final DigestPipelineListener digest;
+  private final String urlRoot;
 
-  private Configuration configuration;
-  private Configuration.Mode mode;
-  private final Map<String, String> bundleFingerprints = new HashMap<>();
-  private String contextPath;
-  private String urlPattern;
-
-  @Override
-  public String getName() {
-    return "servlet";
+  public Includes(DigestPipelineListener digest, String contextPath, String urlPattern) {
+    this.digest = digest;
+    this.urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
+    this.bundles = null;
   }
   
-  @Override
-  public void onAssetProcessed(String asset, String name, String assetPath, Bundle bundle) {}
-  
-  @Override
-  public void onBundleProcessed(String bundle, String bundleName) {
-    try {
-      MessageDigest messageDigest = MessageDigest.getInstance("md5");
-      String fingerprint = DatatypeConverter.printHexBinary(messageDigest.digest(bundle.getBytes()));
-      String fingerprintedBundleName = FilenameUtils.getBaseName(bundleName) + "-humpty" + fingerprint + "." + FilenameUtils.getExtension(bundleName);
-      
-      bundleFingerprints.put(bundleName, fingerprintedBundleName);
-    } catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException(e);
-    }
+  public Includes(List<Bundle> bundles, String contextPath, String urlPattern) {
+    this.bundles = bundles;
+    this.urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
+    this.digest = null;
   }
   
   public String generate(String bundleName) {
-    Bundle bundle = configuration.getBundles().stream().filter(b -> b.accepts(bundleName)).findFirst().orElseThrow(() -> new IllegalArgumentException("No bundle defined with name: " + bundleName));
-    String urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
-
-    if (Configuration.Mode.DEVELOPMENT != mode) {
-      return toHtml(urlRoot, bundleFingerprints.get(bundleName));
+    if (digest != null) {
+      return toHtml(urlRoot, digest.getDigest(bundleName));
     }
 
+    Bundle bundle = bundles.stream().filter(b -> b.accepts(bundleName)).findFirst().orElseThrow(() -> new IllegalArgumentException("No bundle defined with name: " + bundleName));
+    
     return bundle.stream().map(asset -> toHtml(urlRoot, bundle.getName() + "/" + asset)).collect(Collectors.joining("\n"));
   }
   
-  @Inject
-  public void configure(Configuration configuration, Configuration.Mode mode, ServletContext servletContext) {
-    this.configuration = configuration;
-    Configuration.Options options = configuration.getOptionsFor(this);
-    this.urlPattern = options.get("urlPattern", HumptyServletContextInitializer.DEFAULT_URL_PATTERN);
-    this.mode = mode;
-    this.contextPath = servletContext.getContextPath();
-    if (mode == Configuration.Mode.EXTERNAL) {
-      this.bundleFingerprints.putAll(new Toml().parse(getClass().getResourceAsStream("/humpty-external.toml")).to(Map.class));
-    }
-  }
-
   private String toHtml(String contextPath, String expandedAsset) {
     StringBuilder html = new StringBuilder();
     String assetBaseName = expandedAsset;

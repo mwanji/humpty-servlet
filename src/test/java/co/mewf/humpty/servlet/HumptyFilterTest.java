@@ -21,7 +21,7 @@ import co.mewf.humpty.config.HumptyBootstrap;
 
 public class HumptyFilterTest {
 
-  private final Pipeline pipeline = new HumptyBootstrap("/humpty-servlet-cache.toml").createPipeline();
+  private final Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml").createPipeline();
 
   @Test
   public void should_handle_digest_bundle_name() throws Exception {
