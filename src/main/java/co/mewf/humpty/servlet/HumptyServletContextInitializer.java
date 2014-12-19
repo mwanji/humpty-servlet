@@ -1,14 +1,12 @@
 package co.mewf.humpty.servlet;
 
-import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
 
 import co.mewf.humpty.Pipeline;
 import co.mewf.humpty.config.Configuration;
@@ -32,13 +30,15 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
     Configuration configuration = Configuration.load("/humpty.toml");
     HumptyBootstrap humptyBootstrap = new HumptyBootstrap(configuration, ctx);
     Options options = configuration.getOptionsFor(this);
-    String urlPattern = options.get("urlPattern", DEFAULT_URL_PATTERN);
     Pipeline pipeline = humptyBootstrap.createPipeline();
-
+    String urlPattern = options.get("urlPattern", DEFAULT_URL_PATTERN);
     Configuration.Mode mode = Configuration.Mode.valueOf(configuration.getOptionsFor(humptyBootstrap).get("mode", Configuration.Mode.PRODUCTION.toString()));
-    
     Optional<DigestPipelineListener> optionalDigest = pipeline.getPipelineListener(DigestPipelineListener.class);
     Includes includes = mode == Configuration.Mode.DEVELOPMENT || !optionalDigest.isPresent() ? new Includes(configuration.getBundles(), ctx.getContextPath(), urlPattern) : new Includes(optionalDigest.get(), ctx.getContextPath(), urlPattern);
+
+    ctx.setAttribute(Pipeline.class.getName(), pipeline);
+    ctx.setAttribute(HumptyServletContextInitializer.class.getName(), urlPattern);
+    ctx.setAttribute(Configuration.Mode.class.getName(), mode);
     ctx.setAttribute(Includes.class.getName(), includes);
     
     if (mode == Configuration.Mode.PRODUCTION) {
@@ -46,8 +46,8 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
     }
     
     if (mode != Configuration.Mode.EXTERNAL) {
-      FilterRegistration filterRegistration = ctx.addFilter("humptyFilter", new HumptyFilter(pipeline, urlPattern, mode));
-      filterRegistration.addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), false, urlPattern + "/*");
+      ServletRegistration.Dynamic registration = ctx.addServlet("humptyFilter", HumptyFilter.class);
+      registration.addMapping(urlPattern + "/*");
     }
   }
 }

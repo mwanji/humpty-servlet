@@ -7,7 +7,8 @@ import static org.mockito.Mockito.when;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import javax.servlet.FilterChain;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -27,14 +28,23 @@ public class HumptyFilterTest {
   public void should_handle_digest_bundle_name() throws Exception {
     HttpServletResponse response = mock(HttpServletResponse.class);
     
-    HumptyFilter filter = new HumptyFilter(pipeline, "/humpty", Configuration.Mode.DEVELOPMENT);
+    ServletContext servletContext = mock(ServletContext.class);
+    when(servletContext.getAttribute(Pipeline.class.getName())).thenReturn(pipeline);
+    when(servletContext.getAttribute(Configuration.Mode.class.getName())).thenReturn(Configuration.Mode.DEVELOPMENT);
+    when(servletContext.getAttribute(HumptyServletContextInitializer.class.getName())).thenReturn("/humpty");
+    ServletConfig servletConfig = mock(ServletConfig.class);
+    when(servletConfig.getServletContext()).thenReturn(servletContext);
+    
+    
+    HumptyFilter filter = new HumptyFilter();
+    filter.init(servletConfig);
 
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRequestURI()).thenReturn("/humpty/tags-humptya2e5f9bda12.css");
     StringWriter writer = new StringWriter();
     when(response.getWriter()).thenReturn(new PrintWriter(writer));
     
-    filter.doFilter(request, response, mock(FilterChain.class));
+    filter.doGet(request, response);
     
     WebJarAssetLocator locator = new WebJarAssetLocator();
     String expected = IOUtils.toString(getClass().getClassLoader().getResourceAsStream(locator.getFullPath("app1.css")));

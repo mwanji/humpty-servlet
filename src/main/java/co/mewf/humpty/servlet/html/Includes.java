@@ -39,9 +39,11 @@ public class Includes {
   private String toHtml(String contextPath, String expandedAsset) {
     StringBuilder html = new StringBuilder();
     String assetBaseName = expandedAsset;
-    if (assetBaseName.endsWith(".js")) {
+    boolean isCss = assetBaseName.endsWith(".css") || assetBaseName.endsWith(".less");
+    boolean isJs = assetBaseName.endsWith(".js");
+    if (isJs) {
       html.append("<script src=\"");
-    } else if (assetBaseName.endsWith(".css")) {
+    } else if (isCss) {
       html.append("<link rel=\"stylesheet\" href=\"");
     }
     html.append(contextPath);
@@ -51,9 +53,9 @@ public class Includes {
     html.append(FilenameUtils.getPath(expandedAsset));
     html.append(FilenameUtils.getBaseName(expandedAsset));
     html.append('.').append(FilenameUtils.getExtension(expandedAsset));
-    if (assetBaseName.endsWith(".js")) {
+    if (isJs) {
       html.append("\"></script>");
-    } else if (assetBaseName.endsWith(".css")) {
+    } else if (isCss) {
       html.append("\" />");
     }
     
