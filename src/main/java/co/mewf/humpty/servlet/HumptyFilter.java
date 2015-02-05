@@ -43,7 +43,7 @@ public class HumptyFilter extends HttpServlet {
       assetUri = assetUri.substring(0, fingerprintIndex) + "." + FilenameUtils.getExtension(assetUri);
     }
     
-    String processedAsset = pipeline.process(assetUri);
+    String processedAsset = pipeline.process(assetUri).getAsset();
 
     if (assetUri.endsWith(".js")) {
       httpResponse.setContentType("text/javascript");
