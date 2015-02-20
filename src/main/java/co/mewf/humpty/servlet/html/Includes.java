@@ -6,15 +6,16 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FilenameUtils;
 
 import co.mewf.humpty.config.Bundle;
-import co.mewf.humpty.digest.DigestPipelineListener;
+
+import com.moandjiezana.toml.Toml;
 
 public class Includes {
 
   private final List<Bundle> bundles;
-  private final DigestPipelineListener digest;
+  private final Toml digest;
   private final String urlRoot;
 
-  public Includes(DigestPipelineListener digest, String contextPath, String urlPattern) {
+  public Includes(Toml digest, String contextPath, String urlPattern) {
     this.digest = digest;
     this.urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
     this.bundles = null;
@@ -28,37 +29,47 @@ public class Includes {
   
   public String generate(String bundleName) {
     if (digest != null) {
-      return toHtml(urlRoot, digest.getDigest(bundleName));
+      return toHtml(bundleName, digest.getString("\"" + bundleName + "\""));
     }
 
     Bundle bundle = bundles.stream().filter(b -> b.accepts(bundleName)).findFirst().orElseThrow(() -> new IllegalArgumentException("No bundle defined with name: " + bundleName));
     
-    return bundle.stream().map(asset -> toHtml(urlRoot, bundle.getName() + "/" + asset)).collect(Collectors.joining("\n"));
+    return bundle.stream().map(asset -> toHtml(bundleName, bundle.getName() + "/" + asset)).collect(Collectors.joining("\n"));
   }
   
-  private String toHtml(String contextPath, String expandedAsset) {
+  private String toHtml(String bundleName, String expandedAsset) {
     StringBuilder html = new StringBuilder();
-    String assetBaseName = expandedAsset;
-    boolean isCss = assetBaseName.endsWith(".css") || assetBaseName.endsWith(".less");
-    boolean isJs = assetBaseName.endsWith(".js");
-    if (isJs) {
-      html.append("<script src=\"");
-    } else if (isCss) {
-      html.append("<link rel=\"stylesheet\" href=\"");
-    }
-    html.append(contextPath);
-    if (html.charAt(html.length() - 1) != '/') {
-      html.append('/');
-    }
-    html.append(FilenameUtils.getPath(expandedAsset));
-    html.append(FilenameUtils.getBaseName(expandedAsset));
-    html.append('.').append(FilenameUtils.getExtension(expandedAsset));
-    if (isJs) {
-      html.append("\"></script>");
-    } else if (isCss) {
-      html.append("\" />");
+    
+    if (bundleName.endsWith(".js")) {
+      js(expandedAsset, html);
+    } else if (bundleName.endsWith(".css")) {
+      css(expandedAsset, html);
     }
     
     return html.toString();
+  }
+  
+  private void js(String expandedAsset, StringBuilder html) {
+    html.append("<script src=\"")
+    .append(urlRoot);
+    if (html.charAt(html.length() - 1) != '/') {
+      html.append('/');
+    }
+    html.append(FilenameUtils.getPath(expandedAsset))
+      .append(FilenameUtils.getBaseName(expandedAsset))
+      .append('.').append(FilenameUtils.getExtension(expandedAsset))
+      .append("\"></script>");
+  }
+  
+  private void css(String expandedAsset, StringBuilder html) {
+    html.append("<link rel=\"stylesheet\" href=\"")
+      .append(urlRoot);
+    if (html.charAt(html.length() - 1) != '/') {
+      html.append('/');
+    }
+    html.append(FilenameUtils.getPath(expandedAsset))
+      .append(FilenameUtils.getBaseName(expandedAsset))
+      .append('.').append(FilenameUtils.getExtension(expandedAsset))
+      .append("\" />");
   }
 }

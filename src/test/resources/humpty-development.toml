@@ -1,10 +1,7 @@
 [[bundle]]
   name = "tags.js"
-	assets = ["jquery", "blocks"]
+  assets = ["jquery", "blocks"]
 
 [[bundle]]
   name = "tags.css"
-	assets = ["app1", "app2"]
-
-[options.pipeline]
-  mode = "DEVELOPMENT"
+  assets = ["app1", "app2"]

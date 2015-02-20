@@ -1,27 +1,22 @@
 package co.mewf.humpty.servlet.html;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import java.io.InputStream;
-import java.security.MessageDigest;
-
-import javax.servlet.ServletContext;
-import javax.xml.bind.DatatypeConverter;
-
-import org.apache.commons.io.IOUtils;
+import org.junit.Before;
 import org.junit.Test;
-import org.webjars.WebJarAssetLocator;
 
-import co.mewf.humpty.Pipeline;
 import co.mewf.humpty.config.Configuration;
-import co.mewf.humpty.config.HumptyBootstrap;
-import co.mewf.humpty.digest.DigestPipelineListener;
+
+import com.moandjiezana.toml.Toml;
 
 public class IncludesTest {
+  private Toml digestProduction;
+  
+  @Before
+  public void before() throws Exception {
+    digestProduction = new Toml().parse(getClass().getResourceAsStream("/humpty-digest.toml"));
+  }
 
-  private final WebJarAssetLocator locator = new WebJarAssetLocator();
 
   @Test
   public void should_unbundle_assets_in_dev_mode() {
@@ -47,8 +42,6 @@ public class IncludesTest {
   
   @Test
   public void should_use_custom_url_pattern() throws Exception {
-//    Pipeline pipeline = new HumptyBootstrap("/should_use_custom_url_pattern.toml", servletContext("/ctx")).createPipeline();
-    
     Includes includes = new Includes(Configuration.load("/humpty-development.toml").getBundles(), "/ctx", "/custom");
     
     String jsInclude = includes.generate("tags.js");
@@ -60,85 +53,45 @@ public class IncludesTest {
 
   @Test
   public void should_bundle_assets_in_production_mode() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/context")).createPipeline();
-    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
-    Includes includes = new Includes(digest, "/context", "/humpty");
-    
-    pipeline.process("tags.js");
-    pipeline.process("tags.css");
+    Includes includes = new Includes(digestProduction, "/context", "/humpty");
     
     String jsHtml = includes.generate("tags.js");
     String cssHtml = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/context/humpty/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsHtml);
-    assertEquals("<link rel=\"stylesheet\" href=\"/context/humpty/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssHtml);
+    assertEquals("<script src=\"/context/humpty/" + digestProduction.getString("\"tags.js\"") + "\"></script>", jsHtml);
+    assertEquals("<link rel=\"stylesheet\" href=\"/context/humpty/" + digestProduction.getString("\"tags.css\"") + "\" />", cssHtml);
   }
 
   @Test
   public void should_handle_root_context_path_in_production_mode() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/")).createPipeline();
-    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
-    Includes includes = new Includes(digest, "/", "/humpty");
-    
-    pipeline.process("tags.js");
-    pipeline.process("tags.css");
+    Includes includes = new Includes(digestProduction, "/", "/humpty");
     
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/humpty/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
-    assertEquals("<link rel=\"stylesheet\" href=\"/humpty/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
+    assertEquals("<script src=\"/humpty/" + digestProduction.getString("\"tags.js\"") + "\"></script>", jsInclude);
+    assertEquals("<link rel=\"stylesheet\" href=\"/humpty/" + digestProduction.getString("\"tags.css\"") + "\" />", cssInclude);
   }
   
   @Test
   public void should_use_custom_url_pattern_in_production_mode() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/ctx")).createPipeline();
-    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
-    Includes includes = new Includes(digest, "/ctx", "/custom");
-    
-    pipeline.process("tags.js");
-    pipeline.process("tags.css");
+    Includes includes = new Includes(digestProduction, "/ctx", "/custom");
     
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/ctx/custom/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
-    assertEquals("<link rel=\"stylesheet\" href=\"/ctx/custom/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
+    assertEquals("<script src=\"/ctx/custom/" + digestProduction.getString("\"tags.js\"") + "\"></script>", jsInclude);
+    assertEquals("<link rel=\"stylesheet\" href=\"/ctx/custom/" + digestProduction.getString("\"tags.css\"") + "\" />", cssInclude);
   }
   
   @Test
   public void should_handle_empty_url_pattern() throws Exception {
-    Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", servletContext("/ctx")).createPipeline();
-    DigestPipelineListener digest = pipeline.getPipelineListener(DigestPipelineListener.class).get();
-    Includes includes = new Includes(digest, "/ctx", "");
-    
-    pipeline.process("tags.js");
-    pipeline.process("tags.css");
+    Includes includes = new Includes(digestProduction, "/ctx", "");
     
     String jsInclude = includes.generate("tags.js");
     String cssInclude = includes.generate("tags.css");
 
-    assertEquals("<script src=\"/ctx/tags-humpty" + hash("jquery.min.js", "blocks.js") + ".js\"></script>", jsInclude);
-    assertEquals("<link rel=\"stylesheet\" href=\"/ctx/tags-humpty" + hash("app1.css", "app2.css") + ".css\" />", cssInclude);
-  }
-
-  private ServletContext servletContext(String contextPath) {
-    ServletContext servletContext = mock(ServletContext.class);
-    when(servletContext.getContextPath()).thenReturn(contextPath);
-
-    return servletContext;
-  }
-  
-  private String hash(String... paths) throws Exception {
-    MessageDigest messageDigest = MessageDigest.getInstance("md5");
-
-    for (String path : paths) {
-      try (InputStream is = getClass().getClassLoader().getResourceAsStream(locator.getFullPath(path))) {
-        messageDigest.update(IOUtils.toByteArray(is));
-        messageDigest.update("\n".getBytes());
-      }
-    }
-    
-    return DatatypeConverter.printHexBinary(messageDigest.digest());
+    assertEquals("<script src=\"/ctx/" + digestProduction.getString("\"tags.js\"") + "\"></script>", jsInclude);
+    assertEquals("<link rel=\"stylesheet\" href=\"/ctx/" + digestProduction.getString("\"tags.css\"") + "\" />", cssInclude);
   }
 }
