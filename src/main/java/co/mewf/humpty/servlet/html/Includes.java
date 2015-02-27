@@ -1,11 +1,13 @@
 package co.mewf.humpty.servlet.html;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 
 import co.mewf.humpty.config.Bundle;
+import co.mewf.humpty.config.Configuration;
 
 import com.moandjiezana.toml.Toml;
 
@@ -14,19 +16,22 @@ public class Includes {
   private final List<Bundle> bundles;
   private final Toml digest;
   private final String urlRoot;
+  private final Toml watch;
 
-  public Includes(Toml digest, String contextPath, String urlPattern) {
-    this.digest = digest;
+  public Includes(Configuration configuration, String contextPath, String urlPattern) {
     this.urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
-    this.bundles = null;
+    this.bundles = configuration.getBundles();
+    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      InputStream digestStream = classLoader.getResourceAsStream(configuration.getGlobalOptions().getDigestFile().toString());
+      this.digest = digestStream != null ? new Toml().parse(digestStream) : null;
+      InputStream watchStream = classLoader.getResourceAsStream(configuration.getGlobalOptions().getWatchFile().toString());
+      this.watch = watchStream != null ? new Toml().parse(watchStream) : null;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
-  
-  public Includes(List<Bundle> bundles, String contextPath, String urlPattern) {
-    this.bundles = bundles;
-    this.urlRoot = (contextPath + urlPattern).replaceFirst("//", "/");
-    this.digest = null;
-  }
-  
+
   public String generate(String bundleName) {
     if (digest != null) {
       return toHtml(bundleName, digest.getString("\"" + bundleName + "\""));
@@ -35,6 +40,14 @@ public class Includes {
     Bundle bundle = bundles.stream().filter(b -> b.accepts(bundleName)).findFirst().orElseThrow(() -> new IllegalArgumentException("No bundle defined with name: " + bundleName));
     
     return bundle.stream().map(asset -> toHtml(bundleName, bundle.getName() + "/" + asset)).collect(Collectors.joining("\n"));
+  }
+
+  public String generateLiveReload() {
+    if (watch == null) {
+      return "";
+    }
+    
+    return "<script src=\"http://localhost:8765/liveReload.js\"></script>";
   }
   
   private String toHtml(String bundleName, String expandedAsset) {
@@ -72,4 +85,5 @@ public class Includes {
       .append('.').append(FilenameUtils.getExtension(expandedAsset))
       .append("\" />");
   }
+
 }
