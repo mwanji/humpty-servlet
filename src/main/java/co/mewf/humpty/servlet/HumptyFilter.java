@@ -1,6 +1,10 @@
 package co.mewf.humpty.servlet;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -11,6 +15,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FilenameUtils;
 
 import co.mewf.humpty.Pipeline;
+import co.mewf.humpty.config.Configuration;
+
+import com.moandjiezana.toml.Toml;
 
 /**
  * Builds a {@link Pipeline} configured via the default TOML file.
@@ -19,6 +26,7 @@ public class HumptyFilter extends HttpServlet {
 
   private Pipeline pipeline;
   private String urlPattern;
+  private Configuration configuration;
   
   @Override
   public void init(ServletConfig config) throws ServletException {
@@ -26,6 +34,7 @@ public class HumptyFilter extends HttpServlet {
     
     this.pipeline = (Pipeline) config.getServletContext().getAttribute(Pipeline.class.getName());
     this.urlPattern = (String) config.getServletContext().getAttribute(HumptyServletContextInitializer.class.getName());
+    this.configuration = (Configuration) config.getServletContext().getAttribute(Configuration.class.getName());
   }
   
   @Override
@@ -39,7 +48,24 @@ public class HumptyFilter extends HttpServlet {
       assetUri = assetUri.substring(0, fingerprintIndex) + "." + FilenameUtils.getExtension(assetUri);
     }
     
-    String processedAsset = pipeline.process(assetUri).getAsset();
+    Toml watchToml;
+    InputStream inputStream = getClass().getResourceAsStream(configuration.getGlobalOptions().getWatchFile().toString());
+    if (inputStream != null) {
+      try (InputStream is = inputStream) {
+        watchToml = new Toml().parse(is);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    } else {
+      watchToml = new Toml();
+    }
+    String cachePath = watchToml.getString("\"" + assetUri + "\"");
+    String processedAsset;
+    if (cachePath != null) {
+      processedAsset = new String(Files.readAllBytes(Paths.get(cachePath)), StandardCharsets.UTF_8);
+    } else {
+      processedAsset = pipeline.process(assetUri).getAsset();
+    }
 
     if (assetUri.endsWith(".js")) {
       httpResponse.setContentType("text/javascript");

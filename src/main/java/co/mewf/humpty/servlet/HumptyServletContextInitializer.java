@@ -1,6 +1,5 @@
 package co.mewf.humpty.servlet;
 
-import java.io.File;
 import java.util.Set;
 
 import javax.servlet.ServletContainerInitializer;
@@ -14,8 +13,6 @@ import co.mewf.humpty.config.Configuration.Options;
 import co.mewf.humpty.config.HumptyBootstrap;
 import co.mewf.humpty.servlet.html.Includes;
 import co.mewf.humpty.spi.PipelineElement;
-
-import com.moandjiezana.toml.Toml;
 
 public class HumptyServletContextInitializer implements ServletContainerInitializer, PipelineElement {
   
@@ -33,18 +30,13 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
     Options options = configuration.getOptionsFor(this);
     Pipeline pipeline = humptyBootstrap.createPipeline();
     String urlPattern = options.get("urlPattern", DEFAULT_URL_PATTERN);
-    File humptyDigestFile = configuration.getGlobalOptions().getDigestFile().toFile();
-    Includes includes;
-    if (humptyDigestFile.exists()) {
-      includes = new Includes(new Toml().parse(humptyDigestFile), ctx.getContextPath(), urlPattern);
-    } else {
-      includes = new Includes(configuration.getBundles(), ctx.getContextPath(), urlPattern);
-      ServletRegistration.Dynamic registration = ctx.addServlet("humptyFilter", HumptyFilter.class);
-      registration.addMapping(urlPattern + "/*");
-    }
+    Includes includes = new Includes(configuration, ctx.getContextPath(), urlPattern);
+    ServletRegistration.Dynamic registration = ctx.addServlet("humptyFilter", HumptyFilter.class);
+    registration.addMapping(urlPattern + "/*");
 
     ctx.setAttribute(Includes.class.getName(), includes);
     ctx.setAttribute(Pipeline.class.getName(), pipeline);
     ctx.setAttribute(HumptyServletContextInitializer.class.getName(), urlPattern);
+    ctx.setAttribute(Configuration.class.getName(), configuration);
   }
 }
