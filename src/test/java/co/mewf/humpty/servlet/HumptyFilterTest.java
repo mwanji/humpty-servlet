@@ -30,7 +30,7 @@ public class HumptyFilterTest {
     
     ServletContext servletContext = mock(ServletContext.class);
     when(servletContext.getAttribute(Pipeline.class.getName())).thenReturn(pipeline);
-    when(servletContext.getAttribute(Configuration.Mode.class.getName())).thenReturn(Configuration.Mode.DEVELOPMENT);
+    when(servletContext.getAttribute(Configuration.class.getName())).thenReturn(Configuration.load("humpty-production.toml"));
     when(servletContext.getAttribute(HumptyServletContextInitializer.class.getName())).thenReturn("/humpty");
     ServletConfig servletConfig = mock(ServletConfig.class);
     when(servletConfig.getServletContext()).thenReturn(servletContext);
