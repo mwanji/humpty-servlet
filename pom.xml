@@ -6,7 +6,7 @@
     <version>0.11.0</version>
   </parent>
   <artifactId>humpty-servlet</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.0</version>
   <name>humpty-servlet</name>
   <description>Enables humpty in a Servlet 3 environment</description>
   <dependencies>
@@ -35,7 +35,7 @@
     <connection>${github.repo}/${project.artifactId}.git</connection>
     <developerConnection>${github.repo}/${project.artifactId}.git</developerConnection>
     <url>${github.url}/${project.artifactId}</url>
-    <tag>HEAD</tag>
+    <tag>humpty-servlet-0.2.0</tag>
   </scm>
   <issueManagement>
     <system>Github Issues</system>
