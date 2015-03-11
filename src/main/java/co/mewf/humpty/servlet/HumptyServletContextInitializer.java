@@ -31,8 +31,11 @@ public class HumptyServletContextInitializer implements ServletContainerInitiali
     Pipeline pipeline = humptyBootstrap.createPipeline();
     String urlPattern = options.get("urlPattern", DEFAULT_URL_PATTERN);
     Includes includes = new Includes(configuration, ctx.getContextPath(), urlPattern);
-    ServletRegistration.Dynamic registration = ctx.addServlet("humptyFilter", HumptyFilter.class);
-    registration.addMapping(urlPattern + "/*");
+    
+    if (Thread.currentThread().getContextClassLoader().getResource(configuration.getGlobalOptions().getDigestFile().toString()) == null) {
+      ServletRegistration.Dynamic registration = ctx.addServlet("humptyFilter", HumptyFilter.class);
+      registration.addMapping(urlPattern + "/*");
+    }
 
     ctx.setAttribute(Includes.class.getName(), includes);
     ctx.setAttribute(Pipeline.class.getName(), pipeline);
