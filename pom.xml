@@ -41,4 +41,5 @@
     <system>Github Issues</system>
     <url>${github.url}/${project.artifactId}/issues</url>
   </issueManagement>
+  <inceptionYear>2014</inceptionYear>
 </project>
