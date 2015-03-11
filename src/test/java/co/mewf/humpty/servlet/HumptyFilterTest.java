@@ -1,18 +1,22 @@
 package co.mewf.humpty.servlet;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import org.webjars.WebJarAssetLocator;
 
@@ -22,7 +26,7 @@ import co.mewf.humpty.config.HumptyBootstrap;
 
 public class HumptyFilterTest {
 
-  private final Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml").createPipeline();
+  private final Pipeline pipeline = new HumptyBootstrap("/humpty-production.toml", new WebJarAssetLocator(new HashSet<>(Arrays.asList("HumptyFilterTest/app1.css", "HumptyFilterTest/app2.css", "HumptyFilterTest/blocks.js", "HumptyFilterTest/modifiable.css")))).createPipeline();
 
   @Test
   public void should_handle_digest_bundle_name() throws Exception {
@@ -46,10 +50,9 @@ public class HumptyFilterTest {
     
     filter.doGet(request, response);
     
-    WebJarAssetLocator locator = new WebJarAssetLocator();
-    String expected = IOUtils.toString(getClass().getClassLoader().getResourceAsStream(locator.getFullPath("app1.css")));
+    String expected = new String(Files.readAllBytes(Paths.get("src", "test", "resources", "HumptyFilterTest", "app1.css")), UTF_8);
     expected += "\n";
-    expected += IOUtils.toString(getClass().getClassLoader().getResourceAsStream(locator.getFullPath("app2.css")));
+    expected += new String(Files.readAllBytes(Paths.get("src", "test", "resources", "HumptyFilterTest", "app2.css")), UTF_8);
     
     assertEquals(expected.trim(), writer.toString().trim());
   }
