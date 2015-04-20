@@ -1,7 +1,2 @@
-[[bundle]]
-  name = "tags.js"
-	assets = ["jquery", "blocks"]
-
-[[bundle]]
-  name = "tags.css"
-	assets = ["app1", "app2"]
+"tags.js" = ["jquery", "blocks"]
+"tags.css" = ["app1", "app2"]

@@ -1,6 +1,7 @@
 package co.mewf.humpty.servlet.html;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.when;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,19 +16,18 @@ import co.mewf.humpty.config.Configuration;
 import com.moandjiezana.toml.Toml;
 
 public class IncludesTest {
-  private final Configuration configuration = Mockito.spy(Configuration.load("/humpty-development.toml"));
+  private final Configuration configuration = Mockito.spy(Configuration.load("IncludesTest/humpty-development.toml"));
   private final Configuration.GlobalOptions globalOptions = Mockito.spy(configuration.getGlobalOptions());
-  private final Toml digestProduction = new Toml().parse(getClass().getResourceAsStream("/" + globalOptions.getDigestFile().toString()));
-  private ClassLoader originalClassLoader;
+  private final Toml digestProduction = new Toml().parse(getClass().getResourceAsStream("/IncludesTest/humpty-digest.toml"));
   
   @Before
   public void before() {
-    Mockito.when(configuration.getGlobalOptions()).thenReturn(globalOptions);
+    when(configuration.getGlobalOptions()).thenReturn(globalOptions);
   }
   
   @Test
   public void should_unbundle_assets_in_dev_mode() {
-    Mockito.when(globalOptions.getDigestFile()).thenReturn(Paths.get("unknown"));
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("unknown"));
     Includes includes = new Includes(configuration, "/context", "/humpty");
     
     String jsInclude = includes.generate("tags.js");
@@ -39,7 +39,7 @@ public class IncludesTest {
 
   @Test
   public void should_handle_root_context_path_in_dev_mode() {
-    Mockito.when(globalOptions.getDigestFile()).thenReturn(Paths.get("unknown"));
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("unknown"));
     Includes includes = new Includes(configuration, "/", "/humpty");
     
     String jsInclude = includes.generate("tags.js");
@@ -51,7 +51,7 @@ public class IncludesTest {
   
   @Test
   public void should_use_custom_url_pattern() throws Exception {
-    Mockito.when(globalOptions.getDigestFile()).thenReturn(Paths.get("unknown"));
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("unknown"));
     Includes includes = new Includes(configuration, "/ctx", "/custom");
     
     String jsInclude = includes.generate("tags.js");
@@ -63,6 +63,7 @@ public class IncludesTest {
 
   @Test
   public void should_bundle_assets_in_production_mode() throws Exception {
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("IncludesTest/humpty-digest.toml"));
     Includes includes = new Includes(configuration, "/context", "/humpty");
     
     String jsHtml = includes.generate("tags.js");
@@ -74,6 +75,7 @@ public class IncludesTest {
 
   @Test
   public void should_handle_root_context_path_in_production_mode() throws Exception {
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("IncludesTest/humpty-digest.toml"));
     Includes includes = new Includes(configuration, "/", "/humpty");
     
     String jsInclude = includes.generate("tags.js");
@@ -85,6 +87,7 @@ public class IncludesTest {
   
   @Test
   public void should_use_custom_url_pattern_in_production_mode() throws Exception {
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("IncludesTest/humpty-digest.toml"));
     Includes includes = new Includes(configuration, "/ctx", "/custom");
     
     String jsInclude = includes.generate("tags.js");
@@ -96,6 +99,7 @@ public class IncludesTest {
   
   @Test
   public void should_handle_empty_url_pattern() throws Exception {
+    when(globalOptions.getDigestFile()).thenReturn(Paths.get("IncludesTest/humpty-digest.toml"));
     Includes includes = new Includes(configuration, "/ctx", "");
     
     String jsInclude = includes.generate("tags.js");
@@ -107,7 +111,7 @@ public class IncludesTest {
   
   @Test
   public void should_add_live_reload_if_watch_file_present() throws Exception {
-    Mockito.when(globalOptions.getWatchFile()).thenReturn(Paths.get("humpty-watch.fake"));
+    when(globalOptions.getWatchFile()).thenReturn(Paths.get("humpty-watch.fake"));
     
     Path watchFile = Paths.get("src/test/resources/humpty-watch.toml");
     try {
