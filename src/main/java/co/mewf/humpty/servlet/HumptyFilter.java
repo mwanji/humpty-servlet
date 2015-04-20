@@ -33,7 +33,7 @@ public class HumptyFilter extends HttpServlet {
     super.init(config);
     
     this.pipeline = (Pipeline) config.getServletContext().getAttribute(Pipeline.class.getName());
-    this.urlPattern = (String) config.getServletContext().getAttribute(HumptyServletContextInitializer.class.getName());
+    this.urlPattern = config.getServletContext().getContextPath() + config.getServletContext().getAttribute(HumptyServletContextInitializer.class.getName());
     this.configuration = (Configuration) config.getServletContext().getAttribute(Configuration.class.getName());
     
     InputStream inputStream = getClass().getResourceAsStream("/" + configuration.getGlobalOptions().getWatchFile().toString());

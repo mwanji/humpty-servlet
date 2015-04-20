@@ -1,0 +1,5 @@
+"tags.js" = ["jquery", "blocks"]
+"tags.css" = ["app1", "app2"]
+
+[options]
+	assetsDir = "HumptyFilterTest"
